@@ -1,0 +1,79 @@
+server {
+	server_name sitename.ru www.sitename.ru;
+	charset UTF-8;
+	index index.html index.php;
+	disable_symlinks if_not_owner from=$root_path;
+	include /etc/nginx/vhosts-includes/*.conf;
+	include /etc/nginx/vhosts-resources/sitename.ru/*.conf;
+	access_log /var/www/httpd-logs/sitename.ru.access.log;
+	error_log /var/www/httpd-logs/sitename.ru.error.log notice;
+	ssi on;
+	return 301 https://$host:443$request_uri;
+	set $root_path /var/www/sitename/data/www/sitename.ru;
+	root $root_path;
+	listen youripadressserver:80;
+	#gzip on;
+	#gzip_comp_level 5;
+	#gzip_disable "msie6";
+	#gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript;
+    location / {
+        location ~ [^/]\.ph(p\d*|tml)$ {
+            try_files /does_not_exists @php;
+        }
+        location / {
+            try_files $uri $uri/ /index.php?$args; # permalinks
+        }
+    }
+	expires 360s;
+	location @php {
+		fastcgi_index index.php;
+		fastcgi_param PHP_ADMIN_VALUE "sendmail_path = /usr/sbin/sendmail -t -i -f webmaster@sitename.ru";
+		fastcgi_pass unix:/var/www/php-fpm/sitename.sock;
+		fastcgi_split_path_info ^((?U).+\.ph(?:p\d*|tml))(/?.+)$;
+		try_files $uri =404;
+		include fastcgi_params;
+	}
+}
+server {
+	server_name sitename.ru www.sitename.ru;
+	ssl on;
+	ssl_certificate "/var/www/httpd-cert/sitename/sitename.ru_le1.crtca";
+	ssl_certificate_key "/var/www/httpd-cert/sitename/sitename.ru_le1.key";
+	ssl_ciphers EECDH:+AES256:-3DES:RSA+AES:RSA+3DES:!NULL:!RC4:!RSA+3DES;
+	ssl_prefer_server_ciphers on;
+	ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+	add_header Strict-Transport-Security "max-age=31536000;";
+	ssl_dhparam /etc/ssl/certs/dhparam4096.pem;
+	charset UTF-8;
+	index index.html index.php;
+	disable_symlinks if_not_owner from=$root_path;
+	include /etc/nginx/vhosts-includes/*.conf;
+	include /etc/nginx/vhosts-resources/sitename.ru/*.conf;
+	access_log /var/www/httpd-logs/sitename.ru.access.log;
+	error_log /var/www/httpd-logs/sitename.ru.error.log notice;
+	ssi on;
+	set $root_path /var/www/sitename/data/www/sitename.ru;
+	root $root_path;
+	listen youripadressserver:443;
+	#gzip on;
+	#gzip_comp_level 5;
+	#gzip_disable "msie6";
+	#gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript;
+    location / {
+        location ~ [^/]\.ph(p\d*|tml)$ {
+            try_files /does_not_exists @php;
+        }
+        location / {
+            try_files $uri $uri/ /index.php?$args; # permalinks
+        }
+    }
+	expires 360s;
+	location @php {
+		fastcgi_index index.php;
+		fastcgi_param PHP_ADMIN_VALUE "sendmail_path = /usr/sbin/sendmail -t -i -f webmaster@sitename.ru";
+		fastcgi_pass unix:/var/www/php-fpm/sitename.sock;
+		fastcgi_split_path_info ^((?U).+\.ph(?:p\d*|tml))(/?.+)$;
+		try_files $uri =404;
+		include fastcgi_params;
+	}
+}

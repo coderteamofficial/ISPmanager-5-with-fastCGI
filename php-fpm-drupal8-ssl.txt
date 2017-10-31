@@ -1,0 +1,212 @@
+server {
+	server_name sitename.ru www.sitename.ru;
+	charset UTF-8;
+	index index.html index.php;
+	disable_symlinks if_not_owner from=$root_path;
+	include /etc/nginx/vhosts-includes/*.conf;
+	include /etc/nginx/vhosts-resources/sitename.ru/*.conf;
+	access_log /var/www/httpd-logs/sitename.ru.access.log;
+	error_log /var/www/httpd-logs/sitename.ru.error.log notice;
+	ssi on;
+	set $root_path /var/www/sitename/data/www/sitename.ru;
+	root $root_path;
+	listen youripadressserver:80;
+	#gzip on;
+	#gzip_comp_level 5;
+	#gzip_disable "msie6";
+	#gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript;
+    location / {
+        location ~ [^/]\.ph(p\d*|tml)$ {
+            try_files /does_not_exists @php;
+        }
+        location / {
+            try_files $uri $uri/ /index.php?$args; # permalinks
+        }
+    }
+    location @rewrite {
+        rewrite ^/(.*)$ /index.php?q=$1;
+    }
+    location = /favicon.ico {
+        log_not_found off;
+        access_log off;
+    }
+
+    location = /robots.txt {
+        allow all;
+        log_not_found off;
+        access_log off;
+    }
+
+    location ~ \..*/.*\.php$ {
+        return 403;
+    }
+
+    location ~ ^/sites/.*/private/ {
+        return 403;
+    }
+    # Don't allow direct access to PHP files in the vendor directory.
+    location ~ /vendor/.*\.php$ {
+        deny all;
+        return 404;
+    }
+
+    # In Drupal 8, we must also match new paths where the '.php' appears in
+    # the middle, such as update.php/selection. The rule we use is strict,
+    # and only allows this pattern with the update.php front controller.
+    # This allows legacy path aliases in the form of
+    # blog/index.php/legacy-path to continue to route to Drupal nodes. If
+    # you do not have any paths like that, then you might prefer to use a
+    # laxer rule, such as:
+    #   location ~ \.php(/|$) {
+    # The laxer rule will continue to work if Drupal uses this new URL
+    # pattern with front controllers other than update.php in a future
+    # release.
+    location ~ '\.php$|^/update.php' {
+        fastcgi_split_path_info ^(.+?\.php)(|/.*)$;
+        # Security note: If you're running a version of PHP older than the
+        # latest 5.3, you should have "cgi.fix_pathinfo = 0;" in php.ini.
+        # See http://serverfault.com/q/627903/94922 for details.
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+        fastcgi_intercept_errors on;
+        fastcgi_pass localhost:9000;
+    }
+
+    # Fighting with Styles? This little gem is amazing.
+    # location ~ ^/sites/.*/files/imagecache/ { # For Drupal <= 6
+    location ~ ^/sites/.*/files/styles/ { # For Drupal >= 7
+        try_files $uri @rewrite;
+    }
+
+    # Handle private files through Drupal. Private file's path can come
+    # with a language prefix.
+    location ~ ^(/[a-z\-]+)?/system/files/ { # For Drupal >= 7
+        try_files $uri /index.php?$query_string;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        try_files $uri @rewrite;
+        expires max;
+        log_not_found off;
+    }
+	return 301 https://$host:443$request_uri;
+	expires 360s;
+	location @php {
+		fastcgi_index index.php;
+		fastcgi_param PHP_ADMIN_VALUE "sendmail_path = /usr/sbin/sendmail -t -i -f webmaster@sitename.ru";
+		fastcgi_pass unix:/var/www/php-fpm/sitename.sock;
+		fastcgi_split_path_info ^((?U).+\.ph(?:p\d*|tml))(/?.+)$;
+		#try_files $uri =404;
+		include fastcgi_params;
+	}
+}
+server {
+	server_name sitename.ru www.sitename.ru;
+	ssl on;
+	ssl_certificate "/var/www/httpd-cert/sitename/sitename.ru_le1.crtca";
+	ssl_certificate_key "/var/www/httpd-cert/sitename/sitename.ru_le1.key";
+	ssl_ciphers EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH;
+	ssl_prefer_server_ciphers on;
+	ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
+	add_header Strict-Transport-Security "max-age=31536000;";
+	charset UTF-8;
+	index index.html index.php;
+	disable_symlinks if_not_owner from=$root_path;
+	include /etc/nginx/vhosts-includes/*.conf;
+	include /etc/nginx/vhosts-resources/sitename.ru/*.conf;
+	access_log /var/www/httpd-logs/sitename.ru.access.log;
+	error_log /var/www/httpd-logs/sitename.ru.error.log notice;
+	ssi on;
+	set $root_path /var/www/sitename/data/www/sitename.ru;
+	root $root_path;
+	listen youripadressserver:443;
+	#gzip on;
+	#gzip_comp_level 5;
+	#gzip_disable "msie6";
+	#gzip_types text/plain text/css application/json application/x-javascript text/xml application/xml application/xml+rss text/javascript application/javascript;
+    location / {
+        location ~ [^/]\.ph(p\d*|tml)$ {
+            try_files /does_not_exists @php;
+        }
+        location / {
+            try_files $uri $uri/ /index.php?$args; # permalinks
+        }
+    }
+    location @rewrite {
+        rewrite ^/(.*)$ /index.php?q=$1;
+    }
+    location = /favicon.ico {
+        log_not_found off;
+        access_log off;
+    }
+
+    location = /robots.txt {
+        allow all;
+        log_not_found off;
+        access_log off;
+    }
+
+    location ~ \..*/.*\.php$ {
+        return 403;
+    }
+
+    location ~ ^/sites/.*/private/ {
+        return 403;
+    }
+    # Don't allow direct access to PHP files in the vendor directory.
+    location ~ /vendor/.*\.php$ {
+        deny all;
+        return 404;
+    }
+
+    # In Drupal 8, we must also match new paths where the '.php' appears in
+    # the middle, such as update.php/selection. The rule we use is strict,
+    # and only allows this pattern with the update.php front controller.
+    # This allows legacy path aliases in the form of
+    # blog/index.php/legacy-path to continue to route to Drupal nodes. If
+    # you do not have any paths like that, then you might prefer to use a
+    # laxer rule, such as:
+    #   location ~ \.php(/|$) {
+    # The laxer rule will continue to work if Drupal uses this new URL
+    # pattern with front controllers other than update.php in a future
+    # release.
+    location ~ '\.php$|^/update.php' {
+        fastcgi_split_path_info ^(.+?\.php)(|/.*)$;
+        # Security note: If you're running a version of PHP older than the
+        # latest 5.3, you should have "cgi.fix_pathinfo = 0;" in php.ini.
+        # See http://serverfault.com/q/627903/94922 for details.
+        include fastcgi_params;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        fastcgi_param PATH_INFO $fastcgi_path_info;
+        fastcgi_intercept_errors on;
+        fastcgi_pass localhost:9000;
+    }
+
+    # Fighting with Styles? This little gem is amazing.
+    # location ~ ^/sites/.*/files/imagecache/ { # For Drupal <= 6
+    location ~ ^/sites/.*/files/styles/ { # For Drupal >= 7
+        try_files $uri @rewrite;
+    }
+
+    # Handle private files through Drupal. Private file's path can come
+    # with a language prefix.
+    location ~ ^(/[a-z\-]+)?/system/files/ { # For Drupal >= 7
+        try_files $uri /index.php?$query_string;
+    }
+
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+        try_files $uri @rewrite;
+        expires max;
+        log_not_found off;
+    }
+	expires 360s;
+	location @php {
+		fastcgi_index index.php;
+		fastcgi_param PHP_ADMIN_VALUE "sendmail_path = /usr/sbin/sendmail -t -i -f webmaster@sitename.ru";
+		fastcgi_pass unix:/var/www/php-fpm/sitename.sock;
+		fastcgi_split_path_info ^((?U).+\.ph(?:p\d*|tml))(/?.+)$;
+		#try_files $uri =404;
+		include fastcgi_params;
+	}
+}
